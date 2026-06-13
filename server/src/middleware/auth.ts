@@ -37,3 +37,20 @@ export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunct
   }
   next();
 }
+
+export function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+  const token = authHeader.substring(7);
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
+    req.userId = decoded.userId;
+    req.userRole = decoded.role;
+  } catch {
+    // ignore invalid token, treat as guest
+  }
+  next();
+}

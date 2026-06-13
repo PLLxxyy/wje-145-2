@@ -15,6 +15,7 @@ export default function ScriptDetail() {
   const [showRate, setShowRate] = useState(false);
   const [myScore, setMyScore] = useState(5);
   const [myComment, setMyComment] = useState('');
+  const [wishing, setWishing] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -38,6 +39,26 @@ export default function ScriptDetail() {
     } catch {}
   };
 
+  const handleWishToggle = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!script) return;
+    setWishing(true);
+    try {
+      if (script.is_wished) {
+        await api.unwishScript(script.id);
+        setScript({ ...script, is_wished: false });
+      } else {
+        await api.wishScript(script.id);
+        setScript({ ...script, is_wished: true });
+      }
+    } finally {
+      setWishing(false);
+    }
+  };
+
   if (!script) return <div style={{ textAlign: 'center', padding: '4rem', color: '#808098' }}>加载中...</div>;
 
   return (
@@ -59,9 +80,18 @@ export default function ScriptDetail() {
           </div>
         </div>
         {user && (
-          <button className="btn btn-primary" onClick={() => setShowRate(true)}>
-            评分 / 写短评
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className={`btn ${script.is_wished ? 'btn-wished' : 'btn-secondary'}`}
+              onClick={handleWishToggle}
+              disabled={wishing}
+            >
+              {script.is_wished ? '❤️ 已想玩' : '🤍 想玩'}
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowRate(true)}>
+              评分 / 写短评
+            </button>
+          </div>
         )}
       </div>
 

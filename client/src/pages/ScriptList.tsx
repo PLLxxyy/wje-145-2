@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, type Script } from '../api';
 import { Stars, DifficultyTag } from '../components/Shared';
 import { useAuth } from '../components/AuthProvider';
 
 export default function ScriptList() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [scripts, setScripts] = useState<Script[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Pick<Script, 'title' | 'description' | 'difficulty' | 'duration' | 'min_players' | 'max_players'>>({
@@ -17,18 +18,47 @@ export default function ScriptList() {
     max_players: 6,
   });
   const [loading, setLoading] = useState(true);
+  const [wishingId, setWishingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    api.getScripts().then(({ scripts }) => setScripts(scripts)).finally(() => setLoading(false));
-  }, []);
+  const load = async () => {
+    try {
+      const { scripts } = await api.getScripts();
+      setScripts(scripts);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
 
   const handleCreate = async () => {
     try {
       await api.createScript(form);
       setShowForm(false);
-      const { scripts } = await api.getScripts();
-      setScripts(scripts);
+      load();
     } catch {}
+  };
+
+  const handleWishToggle = async (e: React.MouseEvent, script: Script) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setWishingId(script.id);
+    try {
+      if (script.is_wished) {
+        await api.unwishScript(script.id);
+      } else {
+        await api.wishScript(script.id);
+      }
+      setScripts(prev => prev.map(s =>
+        s.id === script.id ? { ...s, is_wished: !s.is_wished } : s
+      ));
+    } finally {
+      setWishingId(null);
+    }
   };
 
   if (loading) return <div style={{ textAlign: 'center', padding: '4rem', color: '#808098' }}>加载中...</div>;
@@ -45,18 +75,32 @@ export default function ScriptList() {
 
       <div className="card-grid">
         {scripts.map(script => (
-          <Link key={script.id} to={`/scripts/${script.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="card">
-              <div className="card-title">{script.title}</div>
-              <div className="card-info">
-                <DifficultyTag difficulty={script.difficulty} />
-                <span className="card-tag">{script.duration}分钟</span>
-                <span className="card-tag">{script.min_players}-{script.max_players}人</span>
+          <div key={script.id} style={{ position: 'relative' }}>
+            <Link to={`/scripts/${script.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div className="card-title">{script.title}</div>
+                  {user && (
+                    <button
+                      className="wish-btn"
+                      onClick={(e) => handleWishToggle(e, script)}
+                      disabled={wishingId === script.id}
+                      title={script.is_wished ? '取消想玩' : '标记想玩'}
+                    >
+                      {script.is_wished ? '❤️' : '🤍'}
+                    </button>
+                  )}
+                </div>
+                <div className="card-info">
+                  <DifficultyTag difficulty={script.difficulty} />
+                  <span className="card-tag">{script.duration}分钟</span>
+                  <span className="card-tag">{script.min_players}-{script.max_players}人</span>
+                </div>
+                <Stars score={script.avg_score} count={script.rating_count} />
+                <p className="card-desc" style={{ marginTop: '0.6rem' }}>{script.description}</p>
               </div>
-              <Stars score={script.avg_score} count={script.rating_count} />
-              <p className="card-desc" style={{ marginTop: '0.6rem' }}>{script.description}</p>
-            </div>
-          </Link>
+            </Link>
+          </div>
         ))}
       </div>
 

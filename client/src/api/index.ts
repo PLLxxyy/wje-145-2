@@ -52,6 +52,8 @@ export interface Script {
   cover_url: string;
   avg_score?: number | null;
   rating_count?: number;
+  is_wished?: boolean;
+  wished_at?: string;
 }
 
 export interface Rating {
@@ -131,6 +133,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ score, comment }),
     }),
+
+  wishScript: (id: number) =>
+    request<{ message: string; is_wished: boolean }>(`/scripts/${id}/wish`, {
+      method: 'POST',
+    }),
+  unwishScript: (id: number) =>
+    request<{ message: string; is_wished: boolean }>(`/scripts/${id}/wish`, {
+      method: 'DELETE',
+    }),
+  getMyWishlist: () => request<{ scripts: Script[] }>('/scripts/wishlist/my'),
 
   getMyBookings: () => request<{ bookings: Booking[] }>('/bookings'),
   getAdminBookings: (date?: string) =>

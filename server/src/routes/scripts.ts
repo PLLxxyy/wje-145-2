@@ -1,10 +1,10 @@
 import { Router, Response } from 'express';
 import db from '../db/database';
-import { authMiddleware, adminMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware, adminMiddleware, optionalAuthMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', (_req: AuthRequest, res: Response): void => {
+router.get('/', optionalAuthMiddleware, (_req: AuthRequest, res: Response): void => {
   const scripts = db.prepare('SELECT * FROM scripts ORDER BY id').all();
 
   const ratingsStmt = db.prepare(`
@@ -16,16 +16,42 @@ router.get('/', (_req: AuthRequest, res: Response): void => {
     ratingsMap.set(row.script_id, { avg_score: row.avg_score, rating_count: row.rating_count });
   });
 
+  const wishSet = new Set<number>();
+  if (_req.userId) {
+    const wishRows = db.prepare('SELECT script_id FROM wishlist WHERE user_id = ?').all(_req.userId) as any[];
+    wishRows.forEach((r: any) => wishSet.add(r.script_id));
+  }
+
   const result = (scripts as any[]).map((s: any) => ({
     ...s,
     avg_score: ratingsMap.get(s.id)?.avg_score ?? null,
     rating_count: ratingsMap.get(s.id)?.rating_count ?? 0,
+    is_wished: wishSet.has(s.id),
   }));
 
   res.json({ scripts: result });
 });
 
-router.get('/:id', (req: AuthRequest, res: Response): void => {
+router.get('/wishlist/my', authMiddleware, (req: AuthRequest, res: Response): void => {
+  const rows = db.prepare(`
+    SELECT s.*, w.created_at as wished_at,
+      (SELECT AVG(score) FROM ratings WHERE script_id = s.id) as avg_score,
+      (SELECT COUNT(*) FROM ratings WHERE script_id = s.id) as rating_count
+    FROM wishlist w
+    JOIN scripts s ON w.script_id = s.id
+    WHERE w.user_id = ?
+    ORDER BY w.created_at DESC
+  `).all(req.userId) as any[];
+
+  const scripts = rows.map((r: any) => ({
+    ...r,
+    wished_at: r.wished_at,
+  }));
+
+  res.json({ scripts });
+});
+
+router.get('/:id', optionalAuthMiddleware, (req: AuthRequest, res: Response): void => {
   const script = db.prepare('SELECT * FROM scripts WHERE id = ?').get(req.params.id) as any;
   if (!script) {
     res.status(404).json({ error: '剧本不存在' });
@@ -41,8 +67,14 @@ router.get('/:id', (req: AuthRequest, res: Response): void => {
 
   const avgRow = db.prepare('SELECT AVG(score) as avg_score, COUNT(*) as count FROM ratings WHERE script_id = ?').get(req.params.id) as any;
 
+  let is_wished = false;
+  if (req.userId) {
+    const wishRow = db.prepare('SELECT 1 FROM wishlist WHERE user_id = ? AND script_id = ?').get(req.userId, req.params.id);
+    is_wished = !!wishRow;
+  }
+
   res.json({
-    script,
+    script: { ...script, is_wished },
     ratings,
     avg_score: avgRow?.avg_score ?? null,
     rating_count: avgRow?.count ?? 0,
@@ -84,6 +116,24 @@ router.post('/:id/rate', authMiddleware, (req: AuthRequest, res: Response): void
       res.status(500).json({ error: '评分失败' });
     }
   }
+});
+
+router.post('/:id/wish', authMiddleware, (req: AuthRequest, res: Response): void => {
+  try {
+    db.prepare('INSERT INTO wishlist (user_id, script_id) VALUES (?, ?)').run(req.userId!, req.params.id);
+    res.json({ message: '已添加到想玩', is_wished: true });
+  } catch (e: any) {
+    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.json({ message: '已在想玩列表中', is_wished: true });
+    } else {
+      res.status(500).json({ error: '操作失败' });
+    }
+  }
+});
+
+router.delete('/:id/wish', authMiddleware, (req: AuthRequest, res: Response): void => {
+  db.prepare('DELETE FROM wishlist WHERE user_id = ? AND script_id = ?').run(req.userId!, req.params.id);
+  res.json({ message: '已取消想玩', is_wished: false });
 });
 
 export default router;

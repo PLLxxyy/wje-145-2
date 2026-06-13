@@ -10,6 +10,7 @@ import ScriptDetail from './pages/ScriptDetail';
 import GroupSquare from './pages/GroupSquare';
 import MyBookings from './pages/MyBookings';
 import MyGroups from './pages/MyGroups';
+import MyWishlist from './pages/MyWishlist';
 import AdminDashboard from './pages/AdminDashboard';
 
 function AppRoutes() {
@@ -37,6 +38,7 @@ function AppRoutes() {
           <Route path="/groups" element={<GroupSquare />} />
           <Route path="/my-bookings" element={user ? <MyBookings /> : <Navigate to="/login" />} />
           <Route path="/my-groups" element={user ? <MyGroups /> : <Navigate to="/login" />} />
+          <Route path="/my-wishlist" element={user ? <MyWishlist /> : <Navigate to="/login" />} />
           <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

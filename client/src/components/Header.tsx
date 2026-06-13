@@ -23,6 +23,7 @@ export default function Header() {
               <>
                 <Link to="/my-bookings" className={isActive('/my-bookings')}>我的预约</Link>
                 <Link to="/my-groups" className={isActive('/my-groups')}>我的组局</Link>
+                <Link to="/my-wishlist" className={isActive('/my-wishlist')}>我的想玩</Link>
               </>
             )}
             {user.role === 'admin' && (

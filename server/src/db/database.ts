@@ -92,6 +92,16 @@ export function initDatabase(): void {
       FOREIGN KEY (user_id) REFERENCES users(id),
       UNIQUE(group_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS wishlist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      script_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (script_id) REFERENCES scripts(id),
+      UNIQUE(user_id, script_id)
+    );
   `);
 
   seedData();
