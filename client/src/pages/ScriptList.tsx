@@ -80,16 +80,14 @@ export default function ScriptList() {
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div className="card-title">{script.title}</div>
-                  {user && (
-                    <button
-                      className="wish-btn"
-                      onClick={(e) => handleWishToggle(e, script)}
-                      disabled={wishingId === script.id}
-                      title={script.is_wished ? '取消想玩' : '标记想玩'}
-                    >
-                      {script.is_wished ? '❤️' : '🤍'}
-                    </button>
-                  )}
+                  <button
+                    className="wish-btn"
+                    onClick={(e) => handleWishToggle(e, script)}
+                    disabled={wishingId === script.id}
+                    title={!user ? '登录后可标记想玩' : (script.is_wished ? '取消想玩' : '标记想玩')}
+                  >
+                    {user && script.is_wished ? '❤️' : '🤍'}
+                  </button>
                 </div>
                 <div className="card-info">
                   <DifficultyTag difficulty={script.difficulty} />

@@ -79,20 +79,21 @@ export default function ScriptDetail() {
             <Stars score={avgScore} count={ratingCount} />
           </div>
         </div>
-        {user && (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              className={`btn ${script.is_wished ? 'btn-wished' : 'btn-secondary'}`}
-              onClick={handleWishToggle}
-              disabled={wishing}
-            >
-              {script.is_wished ? '❤️ 已想玩' : '🤍 想玩'}
-            </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            className={`btn ${user && script.is_wished ? 'btn-wished' : 'btn-secondary'}`}
+            onClick={handleWishToggle}
+            disabled={wishing}
+            title={!user ? '登录后可标记想玩' : ''}
+          >
+            {user && script.is_wished ? '❤️ 已想玩' : '🤍 想玩'}
+          </button>
+          {user && (
             <button className="btn btn-primary" onClick={() => setShowRate(true)}>
               评分 / 写短评
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="detail-section">
